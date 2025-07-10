@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Teacher } from '@/types/teacher';
+import { v4 as uuidv4 } from 'uuid';
+import { Teacher, ScheduleSlot } from '@/types/teacher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TeacherProfile from './TeacherProfile';
 import ScheduleCalendar from './ScheduleCalendar';
@@ -53,6 +54,41 @@ const TeacherDetailView: React.FC<TeacherDetailViewProps> = ({ teacher, onUpdate
     }
   ];
 
+  const handleAddSlot = (slot: ScheduleSlot | Omit<ScheduleSlot, 'id'>) => {
+    // Special case for deletion (hacky but works with our current setup)
+    if ('id' in slot && slot.id === 'delete') {
+      // Create a copy of the slot without the id
+      const { id, ...slotWithoutId } = slot;
+      
+      const updatedTeacher = {
+        ...teacher,
+        schedule: teacher.schedule.filter(s => {
+          // Check if this slot matches all properties of the slot to delete
+          return !Object.entries(slotWithoutId).every(([key, value]) => {
+            return s[key as keyof typeof s] === value;
+          });
+        })
+      };
+      
+      onUpdate(updatedTeacher);
+      return;
+    }
+
+    // Handle update or add
+    const slotWithId = 'id' in slot ? slot : { ...slot, id: uuidv4() };
+    
+    const isUpdate = teacher.schedule.some(s => s.id === slotWithId.id);
+    
+    const updatedTeacher = {
+      ...teacher,
+      schedule: isUpdate 
+        ? teacher.schedule.map(s => s.id === slotWithId.id ? slotWithId : s)
+        : [...teacher.schedule, slotWithId as ScheduleSlot]
+    };
+    
+    onUpdate(updatedTeacher);
+  };
+
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
@@ -99,6 +135,7 @@ const TeacherDetailView: React.FC<TeacherDetailViewProps> = ({ teacher, onUpdate
             schedule={teacher.schedule} 
             editable={true}
             onSlotClick={(slot) => console.log('Slot clicked:', slot)}
+            onAddSlot={handleAddSlot}
           />
         </TabsContent>
 

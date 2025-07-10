@@ -6,20 +6,28 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Clock, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AddSlotModal from './AddSlotModal';
+import { v4 as uuidv4 } from 'uuid';
+
+type ScheduleSlotUpdate = Omit<ScheduleSlot, 'id'> & { id?: string };
 
 interface ScheduleCalendarProps {
   schedule: ScheduleSlot[];
   onSlotClick?: (slot: ScheduleSlot) => void;
-  onAddSlot?: (day: DayOfWeek, time: string) => void;
+  onAddSlot?: (slot: ScheduleSlotUpdate) => void;
   editable?: boolean;
 }
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ 
   schedule, 
   onSlotClick, 
-  onAddSlot, 
+  onAddSlot,
   editable = false 
 }) => {
+  const [isAddSlotModalOpen, setIsAddSlotModalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Monday');
+  const [selectedTime, setSelectedTime] = useState('09:00');
+  const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
   const days: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const timeSlots = Array.from({ length: 14 }, (_, i) => {
     const hour = i + 7; // Start from 7 AM
@@ -54,22 +62,85 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
     }
   };
 
+  const handleSlotClick = (e: React.MouseEvent, slot: ScheduleSlot) => {
+    e.stopPropagation();
+    if (onSlotClick) {
+      onSlotClick(slot);
+    }
+  };
+
+  const handleAddButtonClick = (day: DayOfWeek, time: string) => {
+    setSelectedDay(day);
+    setSelectedTime(time);
+    
+    // Calculate end time (1 hour after start time by default)
+    const [hours, minutes] = time.split(':').map(Number);
+    const endTime = new Date();
+    endTime.setHours(hours + 1, minutes);
+    const formattedEndTime = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+    
+    setIsAddSlotModalOpen(true);
+  };
+
+  const handleAddSlot = (newSlot: ScheduleSlotUpdate) => {
+    if (onAddSlot) {
+      // If it's an update or deletion, pass it through as-is
+      // If it's a new slot, generate an ID
+      const slotToAdd = newSlot.id 
+        ? newSlot 
+        : {
+            ...newSlot,
+            id: uuidv4()
+          };
+      onAddSlot(slotToAdd);
+    }
+    setIsAddSlotModalOpen(false);
+    setEditingSlot(null);
+  };
+
+  const handleEditSlot = (slot: ScheduleSlot) => {
+    setEditingSlot(slot);
+    setSelectedDay(slot.day);
+    setSelectedTime(slot.startTime);
+    setIsAddSlotModalOpen(true);
+  };
+
+  const handleDeleteSlot = (slotId: string) => {
+    if (onAddSlot) {
+      // Find the slot to delete
+      const slotToDelete = schedule.find(slot => slot.id === slotId);
+      if (slotToDelete) {
+        // Create a new object with the same properties but with id set to 'delete' to indicate deletion
+        const slotForDeletion: ScheduleSlotUpdate = {
+          ...slotToDelete,
+          id: 'delete', // Special ID to indicate deletion
+        };
+        onAddSlot(slotForDeletion);
+      }
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Weekly Schedule</span>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>Weekly Schedule</span>
+            </div>
+            {editable && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleAddButtonClick('Monday', '09:00')}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Slot
+              </Button>
+            )}
           </CardTitle>
-          {editable && (
-            <Button size="sm" className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Add Slot</span>
-            </Button>
-          )}
-        </div>
-      </CardHeader>
+        </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <div className="min-w-full">
@@ -105,22 +176,51 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                           if (slot && onSlotClick) {
                             onSlotClick(slot);
                           } else if (!slot && onAddSlot) {
-                            onAddSlot(day, time);
+                            handleAddButtonClick(day, time);
                           }
                         }}
                       >
                         {slot && (
                           <div
                             className={cn(
-                              "w-full h-full min-h-[50px] rounded p-2 text-xs",
+                              "w-full h-full min-h-[50px] rounded p-2 text-xs group relative",
                               getSlotTypeColor(slot.type)
                             )}
                             style={{ 
                               minHeight: `${getSlotHeight(slot) * 50}px`,
                               height: `${getSlotHeight(slot) * 50}px`
                             }}
+                            onClick={(e) => handleSlotClick(e, slot)}
                           >
                             <div className="font-medium truncate">{slot.subject || slot.type}</div>
+                            {editable && (
+                              <div className="absolute inset-0 bg-black bg-opacity-50 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-white hover:bg-white/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditSlot(slot);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-white hover:bg-white/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Are you sure you want to delete this slot?')) {
+                                      handleDeleteSlot(slot.id);
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            )}
                             <div className="text-xs opacity-75 mt-1">
                               {slot.startTime} - {slot.endTime}
                             </div>
@@ -157,7 +257,24 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+
+      <AddSlotModal
+        isOpen={isAddSlotModalOpen}
+        onClose={() => {
+          setIsAddSlotModalOpen(false);
+          setEditingSlot(null);
+        }}
+        onSave={handleAddSlot}
+        defaultDay={editingSlot?.day || selectedDay}
+        defaultStartTime={editingSlot?.startTime || selectedTime}
+        defaultEndTime={editingSlot?.endTime}
+        defaultType={editingSlot?.type}
+        defaultSubject={editingSlot?.subject}
+        defaultStudentCount={editingSlot?.studentCount}
+        key={editingSlot?.id || `add-${selectedDay}-${selectedTime}`}
+      />
+    </>
   );
 };
 
