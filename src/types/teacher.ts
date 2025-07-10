@@ -9,6 +9,7 @@ export interface Teacher {
     city: string;
     state: string;
     country: string;
+    pincode?: string;
   };
   privateQualifications: Qualification[];
   groupQualifications: Qualification[];

@@ -9,18 +9,14 @@ import {
   Calendar, 
   DollarSign, 
   Edit,
-  Save,
-  X,
   Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+import EditProfileModal from './EditProfileModal';
+import { useToast } from '@/components/ui/use-toast';
 
 interface TeacherProfileProps {
   teacher: Teacher;
@@ -28,17 +24,30 @@ interface TeacherProfileProps {
 }
 
 const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTeacher, setEditedTeacher] = useState<Teacher>(teacher);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
-  const handleSave = () => {
-    onUpdate(editedTeacher);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditedTeacher(teacher);
-    setIsEditing(false);
+  const handleSave = async (updatedTeacher: Teacher) => {
+    setIsSaving(true);
+    try {
+      await onUpdate(updatedTeacher);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+        variant: "default",
+        className: "bg-green-100 text-green-800 border-green-200"
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -77,23 +86,14 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
               </div>
             </div>
             <div className="flex space-x-2">
-              {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)} className="flex items-center space-x-2">
-                  <Edit className="h-4 w-4" />
-                  <span>Edit Profile</span>
-                </Button>
-              ) : (
-                <>
-                  <Button onClick={handleSave} className="flex items-center space-x-2">
-                    <Save className="h-4 w-4" />
-                    <span>Save</span>
-                  </Button>
-                  <Button variant="outline" onClick={handleCancel} className="flex items-center space-x-2">
-                    <X className="h-4 w-4" />
-                    <span>Cancel</span>
-                  </Button>
-                </>
-              )}
+              <Button 
+                onClick={() => setIsModalOpen(true)} 
+                className="flex items-center space-x-2"
+                disabled={isSaving}
+              >
+                <Edit className="h-4 w-4" />
+                <span>Edit Profile</span>
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -108,57 +108,18 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
-              {isEditing ? (
-                <Input
-                  value={editedTeacher.email}
-                  onChange={(e) => setEditedTeacher({...editedTeacher, email: e.target.value})}
-                  className="flex-1"
-                />
-              ) : (
-                <span className="text-sm">{teacher.email}</span>
-              )}
+              <span className="text-sm">{teacher.email}</span>
             </div>
             <div className="flex items-center space-x-3">
               <Phone className="h-5 w-5 text-muted-foreground" />
-              {isEditing ? (
-                <Input
-                  value={editedTeacher.phone}
-                  onChange={(e) => setEditedTeacher({...editedTeacher, phone: e.target.value})}
-                  className="flex-1"
-                />
-              ) : (
-                <span className="text-sm">{teacher.phone}</span>
-              )}
+              <span className="text-sm">{teacher.phone}</span>
             </div>
             <div className="flex items-start space-x-3">
               <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Street"
-                      value={editedTeacher.address.street}
-                      onChange={(e) => setEditedTeacher({
-                        ...editedTeacher,
-                        address: {...editedTeacher.address, street: e.target.value}
-                      })}
-                    />
-                    <Input
-                      placeholder="City"
-                      value={editedTeacher.address.city}
-                      onChange={(e) => setEditedTeacher({
-                        ...editedTeacher,
-                        address: {...editedTeacher.address, city: e.target.value}
-                      })}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-sm space-y-1">
-                    <p>{teacher.address.street}</p>
-                    <p>{teacher.address.city}</p>
-                    <p>{teacher.address.country}</p>
-                  </div>
-                )}
+              <div className="text-sm space-y-1">
+                <p>{teacher.address.street}</p>
+                <p>{teacher.address.city}, {teacher.address.state}</p>
+                <p>{teacher.address.country}{teacher.address.pincode ? ` - ${teacher.address.pincode}` : ''}</p>
               </div>
             </div>
           </CardContent>
@@ -169,12 +130,7 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Private Qualifications
-              {isEditing && (
-                <Button size="sm" variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-            </CardTitle>
+                          </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -183,17 +139,13 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
                   <div>
                     <p className="font-medium text-sm">{qual.name}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <DollarSign className="h-3 w-3 text-muted-foreground" />
+                      
                       <span className="text-xs text-muted-foreground">
-                        ${qual.rate.toFixed(2)} {qual.currency}
+                        {qual.currency} {qual.rate.toFixed(2)}
                       </span>
                     </div>
                   </div>
-                  {isEditing && (
-                    <Button size="sm" variant="ghost">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  )}
+                  
                 </div>
               ))}
             </div>
@@ -205,11 +157,7 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Group Qualifications
-              {isEditing && (
-                <Button size="sm" variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
+             
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -224,17 +172,13 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
                     <div>
                       <p className="font-medium text-sm">{qual.name}</p>
                       <div className="flex items-center space-x-2 mt-1">
-                        <DollarSign className="h-3 w-3 text-muted-foreground" />
+                        
                         <span className="text-xs text-muted-foreground">
-                          ${qual.rate.toFixed(2)} {qual.currency}
+                        {qual.currency} {qual.rate.toFixed(2)}
                         </span>
                       </div>
                     </div>
-                    {isEditing && (
-                      <Button size="sm" variant="ghost">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    )}
+                    
                   </div>
                 ))}
               </div>
@@ -242,6 +186,13 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher, onUpdate }) =>
           </CardContent>
         </Card>
       </div>
+      
+      <EditProfileModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        teacher={teacher}
+        onSave={handleSave}
+      />
     </div>
   );
 };
