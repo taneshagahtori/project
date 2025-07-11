@@ -7,8 +7,28 @@ import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { mockTeachers } from '@/data/mockData';
 import { mockStudents } from '@/pages/StudentsPage';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+
+interface ScheduleSlotDisplay {
+  id: string;
+  day: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  subject?: string;
+  type: 'available' | 'booked' | 'break';
+  color?: string;
+  teacherId: string;
+  teacherName: string;
+  studentName?: string;
+}
+
+const daysOfWeek: DayOfWeek[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const timeSlots = [
   "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
 ];
@@ -28,9 +48,75 @@ const SchedulePage = () => {
   const closeSidebar = () => setSidebarOpen(false);
 
   // Flatten all teacher schedules into a single array of slots
-  const allSlots = mockTeachers.flatMap(teacher =>
-    teacher.schedule.map(slot => ({ ...slot, teacherId: teacher.id, teacherName: teacher.name }))
+  const [allSlots, setAllSlots] = useState<ScheduleSlotDisplay[]>(() =>
+    mockTeachers.flatMap(teacher =>
+      teacher.schedule.map(slot => ({ ...slot, teacherId: teacher.id, teacherName: teacher.name }))
+    )
   );
+
+  // Modal state for adding a slot
+  const [addModal, setAddModal] = useState<{ open: boolean; day: string; time: string } | null>(null);
+  const [form, setForm] = useState({
+    teacherId: '',
+    subject: '',
+    studentId: '',
+    startTime: '',
+    endTime: '',
+    type: 'booked',
+  });
+
+  // When modal opens, reset form
+  React.useEffect(() => {
+    if (addModal && addModal.open) {
+      setForm({
+        teacherId: '',
+        subject: '',
+        studentId: '',
+        startTime: addModal.time,
+        endTime: '',
+        type: 'booked',
+      });
+    }
+  }, [addModal]);
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+  const handleSelectChange = (name: string, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Get teacher and subject options
+  const teacherOptions = mockTeachers.map(t => ({ id: t.id, name: t.name }));
+  const subjectOptions = form.teacherId
+    ? mockTeachers.find(t => t.id === form.teacherId)?.subjects || []
+    : [];
+  const studentOptions = form.subject
+    ? mockStudents.filter(s => s.subject === form.subject)
+    : mockStudents;
+
+  const handleAddSlot = () => {
+    if (!form.teacherId || !form.subject || !form.studentId || !form.startTime || !form.endTime) return;
+    const teacher = mockTeachers.find(t => t.id === form.teacherId);
+    const student = mockStudents.find(s => s.id === form.studentId);
+    setAllSlots(prev => [
+      ...prev,
+      {
+        id: Math.random().toString(36).slice(2),
+        day: addModal.day as DayOfWeek,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        subject: form.subject,
+        type: form.type as 'booked' | 'available' | 'break',
+        color: form.type === 'booked' ? '#10B981' : '#94A3B8',
+        teacherId: form.teacherId,
+        teacherName: teacher?.name || '',
+        studentName: student?.name || '',
+      } as ScheduleSlotDisplay,
+    ]);
+    setAddModal(null);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,7 +153,12 @@ const SchedulePage = () => {
                           return (
                             <td key={day} className="border px-1 py-1 align-top min-w-[180px]">
                               {slots.length === 0 ? (
-                                <span className="text-xs text-muted-foreground">Available</span>
+                                <span
+                                  className="text-xs text-muted-foreground cursor-pointer hover:underline"
+                                  onClick={() => setAddModal({ open: true, day, time })}
+                                >
+                                  Available (Click to add)
+                                </span>
                               ) : (
                                 slots.map(slot => (
                                   <Card key={slot.teacherId + slot.subject + slot.startTime} className="mb-2">
@@ -80,7 +171,7 @@ const SchedulePage = () => {
                                       <div className="text-xs text-muted-foreground">Teacher: {slot.teacherName}</div>
                                       {slot.type === 'booked' && (
                                         <>
-                                          <div className="text-xs">Student: {getStudentNameBySubject(slot.subject, slot.teacherId)}</div>
+                                          <div className="text-xs">Student: {slot.studentName || getStudentNameBySubject(slot.subject, slot.teacherId)}</div>
                                           <div className="text-xs">Duration: {slot.startTime} - {slot.endTime}</div>
                                           <Badge className="bg-green-100 text-green-800 border-green-200">Booked</Badge>
                                         </>
@@ -100,6 +191,76 @@ const SchedulePage = () => {
                   </tbody>
                 </table>
               </div>
+              {/* Add Slot Modal */}
+              <Dialog open={!!addModal} onOpenChange={open => !open && setAddModal(null)}>
+                <DialogContent className="sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle>Add Lesson/Slot</DialogTitle>
+                    <DialogDescription>
+                      Select teacher, subject, student, and time for the new slot.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <Label>Teacher</Label>
+                    <Select value={form.teacherId} onValueChange={v => handleSelectChange('teacherId', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select teacher" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teacherOptions.map(t => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Label>Subject</Label>
+                    <Select value={form.subject} onValueChange={v => handleSelectChange('subject', v)} disabled={!form.teacherId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjectOptions.map(subj => (
+                          <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Label>Student</Label>
+                    <Select value={form.studentId} onValueChange={v => handleSelectChange('studentId', v)} disabled={!form.subject}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {studentOptions.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} ({s.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Start Time</Label>
+                        <Input name="startTime" value={form.startTime} onChange={handleFormChange} type="time" />
+                      </div>
+                      <div>
+                        <Label>End Time</Label>
+                        <Input name="endTime" value={form.endTime} onChange={handleFormChange} type="time" />
+                      </div>
+                    </div>
+                    <Label>Status</Label>
+                    <Select value={form.type} onValueChange={v => handleSelectChange('type', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="booked">Booked</SelectItem>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="break">Break</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button className="w-full mt-2" onClick={handleAddSlot} disabled={!form.teacherId || !form.subject || !form.studentId || !form.startTime || !form.endTime}>Add Slot</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </main>
         </div>
