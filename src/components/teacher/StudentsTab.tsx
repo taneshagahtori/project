@@ -37,6 +37,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { mockStudents as allStudents } from '@/pages/StudentsPage';
 
 interface Student {
   id: string;
@@ -454,6 +455,108 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
   );
 };
 
+const AddStudentModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (student: Student) => void;
+  existingStudentIds: string[];
+}> = ({ isOpen, onClose, onAdd, existingStudentIds }) => {
+  const availableStudents = allStudents.filter(s => !existingStudentIds.includes(s.id));
+  const [selectedId, setSelectedId] = useState<string>("");
+  const selectedStudent = availableStudents.find(s => s.id === selectedId);
+
+  // Editable fields
+  const [form, setForm] = useState<Partial<Student>>({});
+
+  React.useEffect(() => {
+    if (selectedStudent) {
+      setForm({
+        ...selectedStudent,
+        hourlyRate: selectedStudent.hourlyRate ?? 0,
+        email: selectedStudent.email ?? '',
+        phone: selectedStudent.phone ?? '',
+        totalLessons: selectedStudent.totalLessons ?? 0,
+        status: selectedStudent.status as 'active' | 'inactive' | 'pending',
+        level: selectedStudent.level as 'Beginner' | 'Intermediate' | 'Advanced',
+      });
+    } else {
+      setForm({});
+    }
+  }, [selectedStudent]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: name === 'hourlyRate' || name === 'totalLessons' ? Number(value) : value }));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Add Student</DialogTitle>
+          <DialogDescription>Select a student and edit details before adding.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Select value={selectedId} onValueChange={setSelectedId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select student" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableStudents.map(student => (
+                <SelectItem key={student.id} value={student.id}>
+                  {student.name} ({student.subject})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedStudent && (
+            <div className="space-y-3 mt-2">
+              <div className="flex items-center space-x-3">
+                <Avatar>
+                  <AvatarImage src={selectedStudent.avatar} alt={selectedStudent.name} />
+                  <AvatarFallback>{selectedStudent.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{selectedStudent.name}</div>
+                  <div className="text-sm text-muted-foreground">{selectedStudent.subject} - {selectedStudent.level}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" value={form.email || ''} onChange={handleChange} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" name="phone" value={form.phone || ''} onChange={handleChange} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="hourlyRate">Fees (INR/hour)</Label>
+                <Input id="hourlyRate" name="hourlyRate" type="number" value={form.hourlyRate ?? ''} onChange={handleChange} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="totalLessons">Number of Sessions</Label>
+                <Input id="totalLessons" name="totalLessons" type="number" value={form.totalLessons ?? ''} onChange={handleChange} />
+              </div>
+            </div>
+          )}
+          <Button
+            onClick={() => {
+              if (selectedStudent && form.email && form.phone) {
+                onAdd({ ...selectedStudent, ...form, status: (form.status ?? selectedStudent.status) as 'active' | 'inactive' | 'pending', level: (form.level ?? selectedStudent.level) as 'Beginner' | 'Intermediate' | 'Advanced' });
+                onClose();
+              }
+            }}
+            disabled={!selectedStudent}
+            className="w-full mt-4"
+          >
+            Add Student
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const StudentsTab: React.FC = () => {
   const [students, setStudents] = useState<Student[]>(mockStudents);
   const [searchTerm, setSearchTerm] = useState('');
@@ -461,6 +564,7 @@ const StudentsTab: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -490,6 +594,12 @@ const StudentsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <AddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={student => setStudents(prev => [...prev, student])}
+        existingStudentIds={students.map(s => s.id)}
+      />
       <ScheduleLessonModal 
         isOpen={isScheduleModalOpen}
         onClose={() => {
@@ -540,7 +650,7 @@ const StudentsTab: React.FC = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Button className="flex items-center space-x-2">
+        <Button className="flex items-center space-x-2" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="h-4 w-4" />
           <span>Add Student</span>
         </Button>
@@ -694,4 +804,5 @@ const StudentsTab: React.FC = () => {
   );
 };
 
+export { mockStudents };
 export default StudentsTab;

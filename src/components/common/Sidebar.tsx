@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home, current: false },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, current: false },
   { name: 'Teachers', href: '/teachers', icon: Users, current: true },
   { name: 'Students', href: '/students', icon: GraduationCap, current: false },
   { name: 'Schedule', href: '/schedule', icon: Calendar, current: false },
@@ -72,9 +73,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     "w-full justify-start h-10",
                     item.current && "bg-primary/10 text-primary hover:bg-primary/20"
                   )}
+                  asChild
                 >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.name}
+                  <Link to={item.href}>
+                    <Icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </Link>
                 </Button>
               );
             })}
