@@ -76,6 +76,13 @@ const DashboardPage = () => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
+  const safeMonthlyEarnings = monthlyEarnings.length > 0 ? monthlyEarnings : [
+    { month: 'Sample', earnings: 100000 }
+  ];
+  const safeSubjectDistribution = subjectDistribution.length > 0 ? subjectDistribution : [
+    { name: 'Sample', value: 10, color: '#8884d8' }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <div className="flex h-screen overflow-hidden">
@@ -130,7 +137,7 @@ const DashboardPage = () => {
                   </CardHeader>
                   <CardContent style={{ height: 300 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyEarnings}>
+                      <BarChart data={safeMonthlyEarnings}>
                         <XAxis dataKey="month" />
                         <YAxis tickFormatter={v => `₹${v/1000}k`} />
                         <Tooltip formatter={v => `₹${v.toLocaleString('en-IN')}`} />
@@ -147,7 +154,7 @@ const DashboardPage = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={subjectDistribution}
+                          data={safeSubjectDistribution}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -155,7 +162,7 @@ const DashboardPage = () => {
                           outerRadius={80}
                           label
                         >
-                          {subjectDistribution.map((entry, idx) => (
+                          {safeSubjectDistribution.map((entry, idx) => (
                             <Cell key={`cell-${idx}`} fill={entry.color} />
                           ))}
                         </Pie>

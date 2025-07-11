@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,19 +22,20 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home, current: false },
-  { name: 'Teachers', href: '/teachers', icon: Users, current: true },
-  { name: 'Students', href: '/students', icon: GraduationCap, current: false },
-  { name: 'Schedule', href: '/schedule', icon: Calendar, current: false },
-  { name: 'Subjects', href: '/subjects', icon: BookOpen, current: false },
-  { name: 'Payments', href: '/payments', icon: DollarSign, current: false },
-  { name: 'Messages', href: '/messages', icon: MessageSquare, current: false },
-  { name: 'Reports', href: '/reports', icon: BarChart3, current: false },
-  { name: 'Documents', href: '/documents', icon: FileText, current: false },
-  { name: 'Settings', href: '/settings', icon: Settings, current: false },
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Teachers', href: '/', icon: Users }, // <-- change href to '/' for Teachers
+  { name: 'Students', href: '/students', icon: GraduationCap },
+  { name: 'Schedule', href: '/schedule', icon: Calendar },
+  { name: 'Subjects', href: '/subjects', icon: BookOpen },
+  { name: 'Payments', href: '/payments', icon: DollarSign },
+  { name: 'Messages', href: '/messages', icon: MessageSquare },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Documents', href: '/documents', icon: FileText },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const location = useLocation();
   return (
     <>
       {/* Mobile overlay */}
@@ -65,19 +66,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <nav className="flex-1 space-y-1 px-3 py-4">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
               return (
                 <Button
                   key={item.name}
-                  variant={item.current ? "secondary" : "ghost"}
+                  variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "w-full justify-start h-10",
-                    item.current && "bg-primary/10 text-primary hover:bg-primary/20"
+                    isActive && "bg-primary/10 hover:bg-primary/20"
                   )}
                   asChild
                 >
                   <Link to={item.href}>
-                    <Icon className="mr-3 h-5 w-5" />
-                    {item.name}
+                    <Icon className={cn("mr-3 h-5 w-5", isActive && "text-primary")}/>
+                    <span className={cn(isActive && "text-primary font-semibold")}>{item.name}</span>
                   </Link>
                 </Button>
               );
