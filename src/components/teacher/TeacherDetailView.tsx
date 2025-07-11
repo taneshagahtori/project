@@ -33,7 +33,7 @@ const TeacherDetailView: React.FC<TeacherDetailViewProps> = ({ teacher, onUpdate
     },
     {
       title: 'Monthly Revenue',
-      value: '$3,240',
+      value: '₹3,240',
       icon: DollarSign,
       trend: '+15.3%',
       color: 'text-green-600'

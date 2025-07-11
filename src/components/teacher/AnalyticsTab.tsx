@@ -52,7 +52,7 @@ const AnalyticsTab: React.FC = () => {
   const performanceMetrics = [
     {
       title: 'Monthly Revenue',
-      value: '$3,240',
+      value: '₹3,240',
       change: '+15.3%',
       trend: 'up',
       icon: DollarSign,

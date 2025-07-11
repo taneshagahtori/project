@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, BookOpen, Calendar, User, CalendarDays } from 'lucide-react';
 import { mockTeachers } from '@/data/mockData';
 import { mockStudents } from '@/components/teacher/StudentsTab';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import Sidebar from '@/components/common/Sidebar';
 import Header from '@/components/common/Header';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -62,6 +62,28 @@ const recentActivities = [
     time: '3 days ago',
     icon: Users,
   },
+];
+
+// Additional mock data for analytics
+const lessonsOverTime = [
+  { month: 'Aug', lessons: 20 },
+  { month: 'Sep', lessons: 23 },
+  { month: 'Oct', lessons: 26 },
+  { month: 'Nov', lessons: 24 },
+  { month: 'Dec', lessons: 27 },
+  { month: 'Jan', lessons: 28 }
+];
+const topSubjects = [
+  { subject: 'Hindustani Classical', students: 12 },
+  { subject: 'Bollywood Singing', students: 8 },
+  { subject: 'Carnatic Music', students: 7 },
+  { subject: 'Tabla', students: 6 },
+  { subject: 'Western Classical', students: 5 }
+];
+const studentStatusDist = [
+  { status: 'Active', value: 15, color: '#10B981' },
+  { status: 'Inactive', value: 5, color: '#F59E42' },
+  { status: 'Pending', value: 4, color: '#6366F1' }
 ];
 
 const DashboardPage = () => {
@@ -167,6 +189,64 @@ const DashboardPage = () => {
                           ))}
                         </Pie>
                         <Legend />
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+              {/* Additional Analytics Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-foreground">Lessons Taught Over Time</CardTitle>
+                  </CardHeader>
+                  <CardContent style={{ height: 250 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lessonsOverTime}>
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="lessons" stroke="#6366F1" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-foreground">Top Subjects by Students</CardTitle>
+                  </CardHeader>
+                  <CardContent style={{ height: 250 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topSubjects}>
+                        <XAxis dataKey="subject" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="students" fill="#F59E42" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-foreground">Student Status Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent style={{ height: 250 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={studentStatusDist}
+                          dataKey="value"
+                          nameKey="status"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label
+                        >
+                          {studentStatusDist.map((entry, idx) => (
+                            <Cell key={`cell-${idx}`} fill={entry.color} />
+                          ))}
+                        </Pie>
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
